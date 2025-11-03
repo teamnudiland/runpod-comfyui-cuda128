@@ -2,10 +2,11 @@
 FROM runpod/worker-comfyui:5.5.0-base-cuda12.8.1
 
 # install custom nodes using comfy-cli
-RUN comfy-node-install PuLID_ComfyUI ComfyUI-ReActor rgthree-comfy ComfyUI-KJNodes ComfyUI-Manager was-node-suite-comfyui ComfyUI-Crystools
+RUN comfy-node-install pulid_comfyui comfyui-reactor rgthree-comfy comfyui-manager was-node-suite-comfyui ComfyUI-Crystools comfyui-kjnodes comfyui-videohelpersuite
 
 # download all models using comfy-cli (merged into single RUN for better layer caching)
-RUN comfy model download --url https://huggingface.co/Phr00t/WAN2.2-14B-Rapid-AllInOne/resolve/main/v10/wan2.2-i2v-rapid-aio-v10-nsfw.safetensors --relative-path models/checkpoints/Wan2.2 --filename wan2.2-i2v-rapid-aio-v10-nsfw.safetensors
+
+# RUN comfy model download --url https://huggingface.co/Phr00t/WAN2.2-14B-Rapid-AllInOne/resolve/main/v10/wan2.2-i2v-rapid-aio-v10-nsfw.safetensors --relative-path models/checkpoints/Wan2.2 --filename wan2.2-i2v-rapid-aio-v10-nsfw.safetensors
 
 RUN comfy model download --url https://huggingface.co/datasets/Robin9527/LoRA/resolve/main/SDXL/ultraRealisticByStable_v20FP16.safetensors --relative-path models/checkpoints/SDXL --filename ultraRealisticByStable_v20FP16.safetensors
 

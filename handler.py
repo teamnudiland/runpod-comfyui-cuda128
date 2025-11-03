@@ -212,14 +212,76 @@ def check_server(url, retries=500, delay=50):
     return False
 
 
-def upload_images(images):
+def normalize_workflow_paths(workflow):
     """
-    Upload a list of base64 encoded images or images from URLs to the ComfyUI server using the /upload/image endpoint.
+    标准化工作流中的路径，将反斜杠转换为正斜杠。
+    ComfyUI 运行在 Linux 环境下，需要 Unix 风格的路径分隔符。
 
     Args:
-        images (list): A list of dictionaries, each containing the 'name' of the image and the 'image' as either:
+        workflow (dict): 工作流字典
+
+    Returns:
+        dict: 标准化后的工作流字典
+    """
+    if not isinstance(workflow, dict):
+        return workflow
+
+    # 需要标准化的路径字段（包含常见路径相关的字段名）
+    path_fields = ["ckpt_name", "image", "filename", "path", "file_path", "image_path"]
+    
+    for node_id, node_data in workflow.items():
+        if not isinstance(node_data, dict):
+            continue
+            
+        # 处理节点的 inputs 字段
+        if "inputs" in node_data and isinstance(node_data["inputs"], dict):
+            for key, value in node_data["inputs"].items():
+                # 如果字段名包含路径相关关键字，且值是字符串
+                if isinstance(value, str) and "\\" in value:
+                    # 检查是否是路径字段（字段名完全匹配或在字段名中包含路径关键字）
+                    if key in path_fields or any(field in key.lower() for field in path_fields):
+                        normalized = value.replace("\\", "/")
+                        node_data["inputs"][key] = normalized
+                        print(f"worker-comfyui - Normalized path in node {node_id}, field '{key}': {value} -> {normalized}")
+    
+    return workflow
+
+
+def convert_url_to_base64(image_url, timeout=30):
+    """
+    从 URL 下载图片并编码为 base64 字符串。
+
+    Args:
+        image_url (str): 图片的 URL 地址
+        timeout (int): 下载超时时间（秒）
+
+    Returns:
+        str: base64 编码的图片字符串，如果失败则返回 None
+    """
+    try:
+        print(f"worker-comfyui - Downloading image from URL: {image_url}")
+        response = requests.get(image_url, timeout=timeout, stream=True)
+        response.raise_for_status()
+        image_bytes = response.content
+        base64_encoded = base64.b64encode(image_bytes).decode('utf-8')
+        print(f"worker-comfyui - Successfully downloaded and encoded image from URL")
+        return base64_encoded
+    except requests.RequestException as e:
+        print(f"worker-comfyui - Error downloading image from URL {image_url}: {e}")
+        return None
+    except Exception as e:
+        print(f"worker-comfyui - Unexpected error converting URL to base64: {e}")
+        return None
+
+
+def upload_images(images):
+    """
+    Upload a list of base64 encoded images to the ComfyUI server using the /upload/image endpoint.
+    注意: 此函数现在只处理 base64 编码的图片。URL 图片应在调用此函数前先转换为 base64。
+
+    Args:
+        images (list): A list of dictionaries, each containing the 'name' of the image and the 'image' as:
             - A base64 encoded string (with optional data URI prefix)
-            - A URL string (starting with http:// or https://)
 
     Returns:
         dict: A dictionary indicating success or error.
@@ -235,38 +297,20 @@ def upload_images(images):
     for image in images:
         try:
             name = image["name"]
-            image_data_uri = image["image"]  # Get the full string (might have prefix, base64, or URL)
+            image_data_uri = image["image"]  # Get the full string (should be base64 now)
 
-            # Check if it's a URL
-            if image_data_uri.startswith("http://") or image_data_uri.startswith("https://"):
-                # Download image from URL
-                print(f"worker-comfyui - Downloading image from URL: {image_data_uri}")
-                response = requests.get(image_data_uri, timeout=30)
-                response.raise_for_status()
-                blob = response.content
-                # Detect content type from response headers or URL extension
-                content_type = response.headers.get("Content-Type", "image/jpeg")
-                if "image/" not in content_type:
-                    # Try to detect from filename
-                    if name.lower().endswith((".png",)):
-                        content_type = "image/png"
-                    elif name.lower().endswith((".jpg", ".jpeg")):
-                        content_type = "image/jpeg"
-                    else:
-                        content_type = "image/png"  # Default
+            # Handle base64 encoded data
+            # --- Strip Data URI prefix if present ---
+            if "," in image_data_uri:
+                # Find the comma and take everything after it
+                base64_data = image_data_uri.split(",", 1)[1]
             else:
-                # Handle base64 encoded data
-                # --- Strip Data URI prefix if present ---
-                if "," in image_data_uri:
-                    # Find the comma and take everything after it
-                    base64_data = image_data_uri.split(",", 1)[1]
-                else:
-                    # Assume it's already pure base64
-                    base64_data = image_data_uri
-                # --- End strip ---
+                # Assume it's already pure base64
+                base64_data = image_data_uri
+            # --- End strip ---
 
-                blob = base64.b64decode(base64_data)  # Decode the cleaned data
-                content_type = "image/png"  # Default for base64
+            blob = base64.b64decode(base64_data)  # Decode the cleaned data
+            content_type = "image/png"  # Default for base64
 
             # Prepare the form data
             files = {
@@ -536,6 +580,9 @@ def handler(job):
     workflow = validated_data["workflow"]
     input_images = validated_data.get("images")
 
+    # 标准化工作流中的路径（将 Windows 风格的路径转换为 Unix 风格）
+    workflow = normalize_workflow_paths(workflow)
+
     # Make sure that the ComfyUI HTTP API is available before proceeding
     if not check_server(
         f"http://{COMFY_HOST}/",
@@ -545,6 +592,23 @@ def handler(job):
         return {
             "error": f"ComfyUI server ({COMFY_HOST}) not reachable after multiple retries."
         }
+
+    # 如果输入图片中包含 URL，先下载并转换为 base64
+    if input_images:
+        for image in input_images:
+            image_data = image.get("image", "")
+            # 检查是否是 URL
+            if isinstance(image_data, str) and (image_data.startswith("http://") or image_data.startswith("https://")):
+                print(f"worker-comfyui - Detected URL input for image '{image.get('name')}', converting to base64...")
+                base64_image = convert_url_to_base64(image_data)
+                if base64_image is None:
+                    return {
+                        "error": f"Failed to download and convert image from URL: {image_data}",
+                    }
+                # 将 URL 替换为 base64 编码
+                image["image"] = base64_image
+                print(f"worker-comfyui - Successfully converted URL to base64 for image '{image.get('name')}'")
+            # 如果已经是 base64，保持不变，正常处理
 
     # Upload input images if they exist
     if input_images:
