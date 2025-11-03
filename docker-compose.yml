@@ -1,6 +1,8 @@
 services:
   comfyui-worker:
-    image: runpod/worker-comfyui:dev
+    # 本地测试时使用: runpod-comfyui-cuda128:local
+    # 或使用: runpod/worker-comfyui:dev (开发模式)
+    image: runpod-comfyui-cuda128:local
     pull_policy: never
     deploy:
       resources:
