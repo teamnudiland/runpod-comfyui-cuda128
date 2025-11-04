@@ -10,7 +10,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 COPY handler.py /handler.py
 
 # Ensure required tools are installed (wget, git, unzip should already be in base image, but verify)
-# Note: build-essential and g++ are needed to compile insightface (Cython/C++ extensions)
+# Note: build-essential, g++, and python3-dev are needed to compile insightface (Cython/C++ extensions)
+# python3-dev provides Python.h header files needed for compiling Python extensions
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         wget \
@@ -21,6 +22,7 @@ RUN apt-get update && \
         ca-certificates \
         build-essential \
         g++ \
+        python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create all necessary model directories upfront
@@ -42,45 +44,47 @@ RUN mkdir -p \
 # Each node installs its requirements.txt if it exists
 # Note: Using python3 instead of /venv/bin/python as the base image may not have /venv
 # Remove existing directories before cloning to avoid "already exists" errors
-RUN cd $COMFYUI_PATH/custom_nodes && \
+# Configure git to avoid credential prompts and handle network issues
+RUN git config --global --add safe.directory '*' && \
+    cd $COMFYUI_PATH/custom_nodes && \
     # Install ComfyUI-ReActor (ReActor Face Swap)
     rm -rf ComfyUI-ReActor && \
-    git clone https://github.com/Gourieff/ComfyUI-ReActor.git ComfyUI-ReActor && \
+    git clone --depth 1 https://github.com/Gourieff/ComfyUI-ReActor.git ComfyUI-ReActor && \
     (cd ComfyUI-ReActor && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install rgthree-comfy
     rm -rf rgthree-comfy && \
-    git clone https://github.com/rgthree/rgthree-comfy.git rgthree-comfy && \
+    git clone --depth 1 https://github.com/rgthree/rgthree-comfy.git rgthree-comfy && \
     (cd rgthree-comfy && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install ComfyUI-Manager
     rm -rf ComfyUI-Manager && \
-    git clone https://github.com/ltdrdata/ComfyUI-Manager.git ComfyUI-Manager && \
+    git clone --depth 1 https://github.com/ltdrdata/ComfyUI-Manager.git ComfyUI-Manager && \
     (cd ComfyUI-Manager && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install was-node-suite-comfyui
     rm -rf was-node-suite-comfyui && \
-    git clone https://github.com/WASasquatch/was-node-suite-comfyui.git was-node-suite-comfyui && \
+    git clone --depth 1 https://github.com/WASasquatch/was-node-suite-comfyui.git was-node-suite-comfyui && \
     (cd was-node-suite-comfyui && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install ComfyUI-Crystools
     rm -rf ComfyUI-Crystools && \
-    git clone https://github.com/cubiq/ComfyUI-Crystools.git ComfyUI-Crystools && \
+    git clone --depth 1 https://github.com/cubiq/ComfyUI-Crystools.git ComfyUI-Crystools && \
     (cd ComfyUI-Crystools && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install ComfyUI-KJNodes
     rm -rf comfyui-kjnodes && \
-    git clone https://github.com/kijai/ComfyUI-KJNodes.git comfyui-kjnodes && \
+    git clone --depth 1 https://github.com/kijai/ComfyUI-KJNodes.git comfyui-kjnodes && \
     (cd comfyui-kjnodes && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install ComfyUI-VideoHelperSuite
     rm -rf comfyui-videohelpersuite && \
-    git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git comfyui-videohelpersuite && \
+    git clone --depth 1 https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git comfyui-videohelpersuite && \
     (cd comfyui-videohelpersuite && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install PuLID_ComfyUI
     rm -rf PuLID_ComfyUI && \
-    git clone https://github.com/cubiq/PuLID_ComfyUI.git PuLID_ComfyUI && \
+    git clone --depth 1 https://github.com/cubiq/PuLID_ComfyUI.git PuLID_ComfyUI && \
     (cd PuLID_ComfyUI && \
      ([ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
      python3 -m pip install --no-cache-dir facexlib || true) && \
