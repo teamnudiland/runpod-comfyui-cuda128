@@ -197,3 +197,20 @@ RUN wget -q  -O $COMFYUI_PATH/models/loras/Wan2.2/DR34MJOB_I2V_14b_HighNoise.saf
     "https://huggingface.co/datasets/Robin9527/LoRA/resolve/main/Wan22/zurimix-high-i2v.safetensors" && \
     wget -q  -O $COMFYUI_PATH/models/loras/Wan2.2/zurimix-low-i2v.safetensors \
     "https://huggingface.co/datasets/Robin9527/LoRA/resolve/main/Wan22/zurimix-low-i2v.safetensors"
+
+# Pre-download BLIP models to avoid runtime download failures
+# BLIP models are used by was-node-suite-comfyui for image captioning and VQA
+# According to was-node-suite-comfyui, it uses /comfyui/models/blip as cache_dir
+# We download models using transformers library which will place them correctly
+RUN mkdir -p $COMFYUI_PATH/models/blip && \
+    python3 -c "from transformers import BlipProcessor, BlipForConditionalGeneration, BlipForQuestionAnswering; \
+    import os; \
+    blip_cache = '/comfyui/models/blip'; \
+    os.environ['HF_HUB_CACHE'] = blip_cache; \
+    print('Downloading BLIP image captioning model...'); \
+    BlipProcessor.from_pretrained('Salesforce/blip-image-captioning-base', cache_dir=blip_cache); \
+    BlipForConditionalGeneration.from_pretrained('Salesforce/blip-image-captioning-base', cache_dir=blip_cache); \
+    print('Downloading BLIP VQA model...'); \
+    BlipProcessor.from_pretrained('Salesforce/blip-vqa-base', cache_dir=blip_cache); \
+    BlipForQuestionAnswering.from_pretrained('Salesforce/blip-vqa-base', cache_dir=blip_cache); \
+    print('BLIP models downloaded successfully')"
