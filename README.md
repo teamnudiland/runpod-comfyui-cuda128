@@ -150,23 +150,37 @@ Each object within the `input.images` array must contain:
 
 ## Publish to Docker Hub
 
-### 推荐：使用 GitHub Actions 自动化构建（推荐）
+### 推荐：使用 Docker Hub 自动构建（最推荐）
 
-使用 GitHub Actions 自动构建并推送镜像到 Docker Hub，无需本地推送大镜像。
+Docker Hub 提供原生自动构建服务，直接连接 GitHub 仓库，推送代码时自动构建。相比 GitHub Actions，Docker Hub 的构建环境有更大的磁盘空间，更适合构建大型镜像（92GB）。
+
+**配置步骤**：
+1. 在 Docker Hub 创建仓库（如：`robinl9527/comfyui-cuda128`）
+2. 连接 GitHub 仓库并配置构建规则
+3. 详细配置说明请参考：[Docker Hub 自动构建配置指南](docs/dockerhub-autobuild-setup.md)
+
+**优势**：
+- ✅ 无需配置 GitHub Secrets
+- ✅ 更大的构建环境磁盘空间
+- ✅ 原生支持，无需维护工作流配置
+- ✅ 自动在推送代码时触发构建
+
+**注意**：Docker Hub 免费账号每月有 200 分钟构建时间限制，对于大型镜像可能需要升级到付费计划。
+
+### 备选方案 1：使用 GitHub Actions 自动化构建
+
+如果 Docker Hub 自动构建不可用，可以使用 GitHub Actions：
 
 **配置步骤**：
 1. 在 Docker Hub 创建仓库（如：`robinl9527/comfyui-cuda128`）
 2. 在 GitHub 仓库配置 Secrets：
    - `DOCKERHUB_USERNAME`: 你的 Docker Hub 用户名
    - `DOCKERHUB_TOKEN`: Docker Hub Access Token
-3. 详细配置说明请参考：[Docker Hub 自动化构建配置指南](docs/dockerhub-setup.md)
+3. 详细配置说明请参考：[GitHub Actions 自动化构建配置指南](docs/dockerhub-setup.md)
 
-工作流会自动在以下情况触发：
-- 推送到 `main` 分支（Dockerfile 有变化时）
-- 创建新 Release 时
-- 手动在 Actions 页面触发
+**注意**：GitHub Actions 免费 runner 磁盘空间有限（约 14GB），可能无法构建 92GB 的镜像。
 
-### 本地构建和推送（备选方案）
+### 备选方案 2：本地构建和推送
 
 如果需要在本地构建和推送，请参考：
 
