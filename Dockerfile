@@ -31,14 +31,13 @@ RUN mkdir -p \
     $COMFYUI_PATH/models/checkpoints/Wan2.2 \
     $COMFYUI_PATH/models/clip_vision/wan \
     $COMFYUI_PATH/models/pulid \
-    $COMFYUI_PATH/models/insightface \
+    $COMFYUI_PATH/models/insightface/models \
     $COMFYUI_PATH/models/reswapper \
     $COMFYUI_PATH/models/hyperswap \
     $COMFYUI_PATH/models/facerestore_models \
     $COMFYUI_PATH/models/upscale_models \
     $COMFYUI_PATH/models/loras/SDXL \
-    $COMFYUI_PATH/models/loras/Wan2.2 \
-    $COMFYUI_PATH/models/insightface/models/antelopev2
+    $COMFYUI_PATH/models/loras/Wan2.2
 
 # Install all custom nodes in a single RUN block (optimizes Docker layers)
 # Each node installs its requirements.txt if it exists
@@ -101,10 +100,11 @@ RUN git config --global --add safe.directory '*' && \
     cd $COMFYUI_PATH
 
 # Download InsightFace AntelopeV2 models (buffalo_l.zip) - special handling with unzip
-# Note: buffalo_l.zip contains buffalo_l directory, but PuLID expects antelopev2 directory
+# Note: buffalo_l.zip contains buffalo_l directory with .onnx files, but PuLID expects antelopev2 directory
 RUN wget -q -O /tmp/buffalo_l.zip "https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/buffalo_l.zip" && \
-    unzip -q /tmp/buffalo_l.zip -d /tmp/ && \
-    mv /tmp/buffalo_l $COMFYUI_PATH/models/insightface/models/antelopev2 && \
+    unzip -q /tmp/buffalo_l.zip -d $COMFYUI_PATH/models/insightface/models/ && \
+    rm -rf $COMFYUI_PATH/models/insightface/models/antelopev2 && \
+    mv $COMFYUI_PATH/models/insightface/models/buffalo_l $COMFYUI_PATH/models/insightface/models/antelopev2 && \
     rm /tmp/buffalo_l.zip
 
 # Download all models in optimized batches (grouped by type to optimize layer caching)
