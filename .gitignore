@@ -6,3 +6,11 @@ models
 simulated_uploaded
 __pycache__
 .specstory/
+
+# Log files
+logs*.txt
+*.log
+
+# Test file copies (backup/test files)
+test_input copy*.json
+test_resources/test_input copy*.json
