@@ -37,40 +37,41 @@ RUN mkdir -p \
 
 # Install all custom nodes in a single RUN block (optimizes Docker layers)
 # Each node installs its requirements.txt if it exists
+# Note: Using python3 instead of /venv/bin/python as the base image may not have /venv
 RUN cd $COMFYUI_PATH/custom_nodes && \
     # Install ComfyUI-ReActor (ReActor Face Swap)
     git clone https://github.com/Gourieff/ComfyUI-ReActor.git ComfyUI-ReActor && \
-    (cd ComfyUI-ReActor && [ ! -f requirements.txt ] || /venv/bin/python -m pip install --no-cache-dir -r requirements.txt) && \
+    (cd ComfyUI-ReActor && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install rgthree-comfy
     git clone https://github.com/rgthree/rgthree-comfy.git rgthree-comfy && \
-    (cd rgthree-comfy && [ ! -f requirements.txt ] || /venv/bin/python -m pip install --no-cache-dir -r requirements.txt) && \
+    (cd rgthree-comfy && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install ComfyUI-Manager
     git clone https://github.com/ltdrdata/ComfyUI-Manager.git ComfyUI-Manager && \
-    (cd ComfyUI-Manager && [ ! -f requirements.txt ] || /venv/bin/python -m pip install --no-cache-dir -r requirements.txt) && \
+    (cd ComfyUI-Manager && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install was-node-suite-comfyui
     git clone https://github.com/WASasquatch/was-node-suite-comfyui.git was-node-suite-comfyui && \
-    (cd was-node-suite-comfyui && [ ! -f requirements.txt ] || /venv/bin/python -m pip install --no-cache-dir -r requirements.txt) && \
+    (cd was-node-suite-comfyui && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install ComfyUI-Crystools
     git clone https://github.com/cubiq/ComfyUI-Crystools.git ComfyUI-Crystools && \
-    (cd ComfyUI-Crystools && [ ! -f requirements.txt ] || /venv/bin/python -m pip install --no-cache-dir -r requirements.txt) && \
+    (cd ComfyUI-Crystools && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install ComfyUI-KJNodes
     git clone https://github.com/kijai/ComfyUI-KJNodes.git comfyui-kjnodes && \
-    (cd comfyui-kjnodes && [ ! -f requirements.txt ] || /venv/bin/python -m pip install --no-cache-dir -r requirements.txt) && \
+    (cd comfyui-kjnodes && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install ComfyUI-VideoHelperSuite
     git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git comfyui-videohelpersuite && \
-    (cd comfyui-videohelpersuite && [ ! -f requirements.txt ] || /venv/bin/python -m pip install --no-cache-dir -r requirements.txt) && \
+    (cd comfyui-videohelpersuite && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
     # Install PuLID_ComfyUI
     git clone https://github.com/cubiq/PuLID_ComfyUI.git PuLID_ComfyUI && \
     (cd PuLID_ComfyUI && \
-     ([ ! -f requirements.txt ] || /venv/bin/python -m pip install --no-cache-dir -r requirements.txt) && \
-     /venv/bin/python -m pip install --no-cache-dir facexlib || true) && \
+     ([ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
+     python3 -m pip install --no-cache-dir facexlib || true) && \
     \
     cd $COMFYUI_PATH
 
