@@ -227,7 +227,22 @@ def normalize_workflow_paths(workflow):
         return workflow
 
     # 需要标准化的路径字段（包含常见路径相关的字段名）
-    path_fields = ["ckpt_name", "image", "filename", "path", "file_path", "image_path"]
+    path_fields = [
+        "ckpt_name", "image", "filename", "path", "file_path", "image_path",
+        "clip_name", "lora_name", "model_name", "vae_name", "controlnet_name",
+        "upscale_model", "embeddings", "hypernetwork_name"
+    ]
+    
+    # 常见的文件扩展名，用于识别路径字符串
+    file_extensions = (".safetensors", ".ckpt", ".pt", ".pth", ".onnx", ".bin", 
+                       ".png", ".jpg", ".jpeg", ".webp", ".gif", ".mp4", ".webm")
+    
+    def is_likely_path(value):
+        """检查字符串是否看起来像一个文件路径"""
+        if not isinstance(value, str) or "\\" not in value:
+            return False
+        # 如果包含反斜杠且包含文件扩展名，很可能是路径
+        return any(value.lower().endswith(ext) for ext in file_extensions)
     
     for node_id, node_data in workflow.items():
         if not isinstance(node_data, dict):
@@ -236,10 +251,13 @@ def normalize_workflow_paths(workflow):
         # 处理节点的 inputs 字段
         if "inputs" in node_data and isinstance(node_data["inputs"], dict):
             for key, value in node_data["inputs"].items():
-                # 如果字段名包含路径相关关键字，且值是字符串
+                # 如果值是字符串且包含反斜杠
                 if isinstance(value, str) and "\\" in value:
-                    # 检查是否是路径字段（字段名完全匹配或在字段名中包含路径关键字）
-                    if key in path_fields or any(field in key.lower() for field in path_fields):
+                    # 检查是否是路径字段（字段名匹配或在字段名中包含路径关键字）或看起来像路径
+                    is_path_field = key in path_fields or any(field in key.lower() for field in path_fields)
+                    is_likely_file_path = is_likely_path(value)
+                    
+                    if is_path_field or is_likely_file_path:
                         normalized = value.replace("\\", "/")
                         node_data["inputs"][key] = normalized
                         print(f"worker-comfyui - Normalized path in node {node_id}, field '{key}': {value} -> {normalized}")
@@ -793,11 +811,20 @@ def handler(job):
 
         print(f"worker-comfyui - Processing {len(outputs)} output nodes...")
         for node_id, node_output in outputs.items():
+            # Process "images", "gifs", and "animated" outputs (all are media files)
+            media_files = []
             if "images" in node_output:
+                media_files.extend(node_output["images"])
+            if "gifs" in node_output:
+                media_files.extend(node_output["gifs"])
+            if "animated" in node_output:
+                media_files.extend(node_output["animated"])
+            
+            if media_files:
                 print(
-                    f"worker-comfyui - Node {node_id} contains {len(node_output['images'])} media file(s)"
+                    f"worker-comfyui - Node {node_id} contains {len(media_files)} media file(s)"
                 )
-                for image_info in node_output["images"]:
+                for image_info in media_files:
                     filename = image_info.get("filename")
                     subfolder = image_info.get("subfolder", "")
                     img_type = image_info.get("type")
@@ -895,8 +922,8 @@ def handler(job):
                         error_msg = f"Failed to fetch {media_type} data for {filename} from /view endpoint."
                         errors.append(error_msg)
 
-            # Check for other output types
-            other_keys = [k for k in node_output.keys() if k != "images"]
+            # Check for other output types (excluding images, gifs, and animated which we handle)
+            other_keys = [k for k in node_output.keys() if k not in ["images", "gifs", "animated"]]
             if other_keys:
                 warn_msg = (
                     f"Node {node_id} produced unhandled output keys: {other_keys}."
