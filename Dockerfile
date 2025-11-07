@@ -4,6 +4,13 @@ FROM runpod/worker-comfyui:5.5.0-base-cuda12.8.1
 # Set environment variables for better maintainability
 ENV COMFYUI_PATH=/comfyui
 ENV DEBIAN_FRONTEND=noninteractive
+# Disable Python bytecode debug output and reduce verbose logging
+# PYTHONDONTWRITEBYTECODE: Prevents Python from writing .pyc files (reduces disk I/O)
+# PYTHONUNBUFFERED: Ensures Python output is not buffered (better for Docker logs)
+# TORCH_LOGS: Controls PyTorch logging verbosity (empty string disables most debug output)
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV TORCH_LOGS=""
 
 # Copy custom handler.py to override the base image's handler
 # This allows you to use your enhanced handler with URL image support and path normalization
