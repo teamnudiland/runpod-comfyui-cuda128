@@ -107,6 +107,11 @@ RUN git config --global --add safe.directory '*' && \
     git clone --depth 1 https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git ComfyUI-Frame-Interpolation && \
     (cd ComfyUI-Frame-Interpolation && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
     \
+    # Install ComfyUI-Easy-Use
+    rm -rf ComfyUI-Easy-Use && \
+    git clone --depth 1 https://github.com/yolain/ComfyUI-Easy-Use.git ComfyUI-Easy-Use && \
+    (cd ComfyUI-Easy-Use && [ ! -f requirements.txt ] || python3 -m pip install --no-cache-dir -r requirements.txt || true) && \
+    \
     cd $COMFYUI_PATH
 
 # Download InsightFace AntelopeV2 models (antelopev2.zip)
